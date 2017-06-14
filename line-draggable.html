@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html style="height: 100%">
+   <head>
+	   <meta charset="utf-8">
+	   <style type="text/css">
+		   img
+		   {
+			   position:absolute;
+			   left:0px;
+			   top:0px;
+			   z-index:-1;
+               width: 1205px;
+			   height: 636px;
+		   }
+	   </style>
+   </head>
+   <body style="height: 100%; margin: 0;position:relative">
+
+       <img src="./img/tiaoyintai.png" class="img-responsive" />
+       <div id="container" style="height: 430px;width: 1210px;"></div>
+       <script type="text/javascript" src="js/echarts-all-3.js"></script>
+	   <script type="text/javascript" src="js/require.js"></script>
+
+       <!-- <script type="text/javascript" src="js/macarons.js"></script>
+       <script type="text/javascript" src="js/zrender.js"></script> -->
+       
+	   <!-- 
+       <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/extension/dataTool.min.js"></script>
+       <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/map/js/china.js"></script>
+       <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/map/js/world.js"></script>
+       <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=ZUONbpqGBsYGXNIYHicvbAbM"></script>
+       <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/extension/bmap.min.js"></script> -->
+       <script type="text/javascript">
+	   require.config({
+                        packages: [
+                            {
+                                name: 'zrender',
+                                location: 'js',
+                                main: 'zrender'
+                            },
+                            {
+                                name: 'macarons',
+                                location: 'js',
+                                main: 'macarons'
+                            }
+                        ]
+                    });
+		require(
+				[
+					"zrender",
+					'macarons'
+				],
+				function(zrender, theme){
+					var colorList = [
+							'#ff7f50','#87cefa','#da70d6','#32cd32','#6495ed',
+							'#ff69b4','#ba55d3','#cd5c5c','#ffa500','#40e0d0'
+						];
+					var dom = document.getElementById("container");
+					var myChart = echarts.init(dom);
+					var app = {},option = null,symbolSize = 20,N_POINT = 4.3, p = 0.17, Y_CATEGORY = 180, Y_MIN = -24.12;
+					var p1 = {x: Math.ceil(myChart.getWidth()), y: Math.ceil(myChart.getHeight())};
+					var data = [[70, -6], [50, 12], [40, 10], [80, 0],[25, 3]];
+					//var data = [[Math.log(70)/Math.log(10), -6], [Math.log(50)/Math.log(10), 12], [Math.log(40)/Math.log(10), 10], [Math.log(80)/Math.log(10), 0],[Math.log(25)/Math.log(10),3]];
+					//var data = [[40, 10]];
+					var points = [], lineseries = [], normalDistributionList = [], scatterdata = [], y_data = [];
+					/*for (var i = 0; i <= N_POINT; i++) {
+						Y_MIN  = Y_MIN + 0.12;
+						y_data.push(Y_MIN.toFixed(1));
+					}*/
+					echarts.util.each(data, function (value, index) {
+						debugger;
+						value[0] = Math.log(value[0])/Math.log(10);
+						var x = value[0];
+						var y = value[1]
+						var normalDistribution = function(k){
+							return Math.sqrt(2*Math.PI)/p*y*Math.pow(Math.E,-0.5*Math.pow(Math.abs(k-x),2)/Math.pow(p,2))/Math.sqrt(2*Math.PI)*p;
+						}
+						scatterdata.push({
+							value:value,
+							label: {
+								normal: {
+									show: false,
+									textStyle: {
+										color: '#fff',
+									},
+									formatter: function (param) {
+										return Math.pow(10,param.value[0]).toFixed(2) + 'Hz, ' + param.value[1].toFixed(2) + 'dB';
+									},
+									position: 'top'
+								},
+								/*emphasis: {
+								 show: true,
+								 textStyle: {
+								 color: '#fff',
+								 },
+								 formatter: function (param) {
+								 return param.data[0]+","+param.data[1];
+								 },
+								 position: 'top'
+								 }*/
+							}
+						})
+						//var normalDistribution = y*Math.pow(Math.E,-0.5*(k-x)*(k-x)/Math.pow(p,2))/Math.sqrt(2*Math.PI)*100*p;
+						normalDistributionList.push(normalDistribution);
+					})
+					echarts.util.each(normalDistributionList, function (easingFunc,index) {
+						var linedata = [];
+						/*for (var i = 20; i <= N_POINT;) {
+							var y = easingFunc(Math.log(i)/Math.log(10));
+							//linedata.push([i, y]);
+							linedata.push([Math.log(i)/Math.log(10), y]);
+							i=i+6;
+						}*/
+						for (var i = 1; i <= N_POINT;) {
+							var y = easingFunc(i);
+							//linedata.push([i, y]);
+							linedata.push([i, y]);
+							i=i+0.01;
+						}
+						lineseries.push({
+							type: 'line',
+							/*xAxisIndex: count,
+							yAxisIndex: count,*/
+							data: linedata,
+							lineStyle: {
+								normal: {
+									opacity: 0
+								}
+							},
+							smooth: true,
+							symbolSize: symbolSize,
+							showSymbol: false,
+							animationDuration: 1000
+						});
+					})
+					var allLinedataList = [];
+					echarts.util.each(lineseries, function (lineserie, index) {
+						echarts.util.each(lineserie.data, function (linedata,lineindex) {
+							if(index==0){
+								var x = linedata[0], y=linedata[1];
+								allLinedataList.push([x,y]);
+							}
+							else{
+								allLinedataList[lineindex][1] = allLinedataList[lineindex][1]+linedata[1];
+							}
+						})
+					})
+					var tempList = []
+					echarts.util.each(allLinedataList, function (allLinedata, index) {
+						if (index%100 == 0){
+							tempList.push(allLinedata)
+						}
+					})
+					tempLLL=[tempList[1],[100,-3],[600,12],[266,-8],[356,3],[20000,12]]
+					console.log(tempList)
+					console.log(tempLLL)
+					console.log(Math.pow(Math.pow(10,0.6),4))
+					console.log(Math.pow(10,0.6))
+					console.log(Math.log(Math.pow(Math.pow(10,0.6),4))/Math.log(Math.pow(10,0.6)))
+					/*lineseries.push({
+						id: 'a',
+						type: 'line',
+						smooth: true,
+						symbolSize: symbolSize,
+						itemStyle: {
+							normal: {
+								areaStyle: {
+									// 区域图，纵向渐变填充
+									color : (function (){
+										var zrColor = require('zrender/tool/color');
+										return zrColor.getLinearGradient(
+												0, 900, 0, 0,
+												[[0, 'rgba(255,0,0,0.8)'],[0.5, 'rgba(255,255,255,0.1)'],[0.5, 'rgba(255,255,255,0.8)'],[1, 'rgba(255,0,0,0.1)']]
+										)
+									})()
+								}
+							}
+						},
+
+						data: data
+					});*/
+					lineseries.push({
+						type: 'line',
+						/*xAxisIndex: count,
+						 yAxisIndex: count,*/
+						data: allLinedataList,
+						smooth: true,
+						symbolSize: symbolSize,
+						showSymbol: false,
+						lineStyle: {
+							normal: {
+								 // 纵向渐变填充
+								 color : (function (){
+								 var zrColor = require('zrender/tool/color');
+									 return zrColor.getLinearGradient(
+											 0, 0, 1200, 0,
+											 [[0, 'rgba(67, 135, 116, 1)'],[0.5, 'rgba(6, 192, 225, 1)'],[1, 'rgba(0, 159, 233,1)']]
+									 )
+								 })()
+							}
+						},
+						/*itemStyle: {
+							normal: {
+								/!*color : (function (){
+									var zrColor = require('zrender/tool/color');
+									return zrColor.getLinearGradient(
+											0, 0, 1800, 0,
+											[[0, 'rgba(255,0,0,1)'],[1, 'rgba(255,255,255,0.1)']]
+									)
+								})()*!/
+								/!*areaStyle: {
+									// 区域图，纵向渐变填充
+									color : (function (){
+										var zrColor = require('zrender/tool/color');
+										return zrColor.getRadialGradient(
+											800, 800, 100, 800, 800,1132,
+											[[0, 'rgba(255,0,0,0.8)'],[1, 'rgba(255,255,255,0.1)']]
+										)
+									})()
+								}*!/
+							}
+						},*/
+						animationDuration: 1000
+					});
+					lineseries.push({
+						data: scatterdata,
+						type: 'effectScatter',
+						symbolSize: 18,
+						label: {
+							normal: {
+								show: false,
+								textStyle: {
+									color: '#fff',
+								},
+								formatter: function (param) {
+									return Math.round(Math.pow(10,param.data[0])) + 'Hz, ' + param.data[1].toFixed(2) + 'dB';
+								},
+								position: 'top'
+							}
+							/*emphasis: {
+								show: true,
+								textStyle: {
+									color: '#fff',
+								},
+								formatter: function (param) {
+									return param.data[0]+","+param.data[1];
+								},
+								position: 'top'
+							}*/
+						},
+						animation: false,
+						itemStyle: {
+							normal: {
+								//opacity: 0.1,
+								shadowBlur: 8,
+								shadowColor: 'rgba(120, 36, 50, 0.5)',
+								shadowOffsetY: 5,
+								color: new echarts.graphic.RadialGradient(0.4, 0.3, 1, [{
+									offset: 0,
+									color: 'rgba(117, 180, 245, 1)'
+								},  {
+									offset: 1,
+									color: 'rgba(117, 180, 245, 0.5)'
+								}])
+							}
+						}
+					})
+
+					option = {
+						title: {
+							text: ''
+						},
+						tooltip: {
+							triggerOn: 'none',
+							formatter: function (params) {
+								return 'X: ' + params.data[0].toFixed(2) + '<br>Y: ' + params.data[1].toFixed(2);
+							}
+						},
+						grid: {
+							show: true,
+							backgroundColor: 'rgba(28, 28, 28, 1)'
+						},
+						xAxis: {
+							/*type: 'log',
+							max: 1000,
+							axisLabel: {
+								formatter: function (value, index) {
+									return Math.round(Math.log(value)/Math.log(10))
+								}
+							},*/
+							min: 1,
+							max: Math.log(20000)/Math.log(10),
+							type: 'value',
+							axisLabel: {
+								margin: 0,
+								textStyle: {
+									color: 'white'
+								},
+								formatter: function (value, index) {
+									return Math.round(Math.pow(10,value)) + "Hz";
+								}
+							},
+							axisLine: {onZero: true},
+							splitLine: {
+								lineStyle: {
+									// 使用深浅的间隔色
+									color: ['#87cefa']
+								}
+							}
+						},
+						yAxis: {
+							min: -12,
+							max: 24,
+							type: 'value',
+							axisLabel: {
+
+								textStyle: {
+									color: 'white'
+								},
+								formatter: '{value} dB',
+							},
+							/*type: 'log',
+							name: 'y',
+							axisLabel: {
+								formatter: function (value, index) {
+									return Math.round(Math.log(value)/Math.log(Math.pow(10,0.6)))*6
+								}
+							},
+							logBase:Math.pow(10,0.6),*/
+							axisLine: {onZero: true},
+							splitLine: {
+								lineStyle: {
+									// 使用深浅的间隔色
+									color: ['#87cefa']
+								}
+							}
+							//data: y_data
+						},
+						/*dataZoom: [
+							{
+								type: 'slider',
+								xAxisIndex: 0,
+								filterMode: 'empty'
+							},
+							{
+								type: 'slider',
+								yAxisIndex: 0,
+								filterMode: 'empty'
+							},
+							{
+								type: 'inside',
+								xAxisIndex: 0,
+								filterMode: 'empty'
+							},
+							{
+								type: 'inside',
+								yAxisIndex: 0,
+								filterMode: 'empty'
+							}
+						],*/
+
+						series: lineseries/*[
+							{
+								name: '3的指数',
+								type: 'line',
+								data: [[2.05810634239426,Math.pow(Math.pow(10,0.6),-2)], [7.5058106342339426,111],[12.5058106342339426,322]]
+							},
+							{
+								name: '2的指数',
+								type: 'line',
+								data: [1, 2, 4, 8, 16, 32, 64, 128, 256]
+							},
+							{
+								name: '1/2的指数',
+								type: 'line',
+								data: [1/2, 1/4, 1/8, 1/16, 1/32, 1/64, 1/128, 1/256, 1/512]
+							}
+						]*//*[
+							{
+								id: 'a',
+								type: 'line',
+								smooth: true,
+								symbolSize: symbolSize,
+								itemStyle: {
+									normal: {
+										areaStyle: {
+											// 区域图，纵向渐变填充
+											color : (function (){
+												var zrColor = require('zrender/tool/color');
+												return zrColor.getLinearGradient(
+													0, 900, 0, 0,
+													[[0, 'rgba(255,0,0,0.8)'],[0.5, 'rgba(255,255,255,0.1)'],[0.5, 'rgba(255,255,255,0.8)'],[1, 'rgba(255,0,0,0.1)']]
+												)
+											})()
+										}
+									}
+								},
+								
+								data: data
+							}
+						]*/
+					};
+
+					var zr = myChart.getZr();
+
+					if (!app.inNode) {
+						// 在浏览器端执行下面的操作
+						setTimeout(function () {
+							// Add shadow circles (which is not visible) to enable drag.
+							echarts.util.each(data, function (item, dataIndex) {
+								debugger;
+								var position = myChart.convertToPixel('grid', item);
+								/*var circleEl = new echarts.graphic.Circle({
+									shape: {
+										cx: 0,
+										cy: 0,
+										r: symbolSize / 2
+									},
+									style: {
+										fill: 'white',
+										stroke: '#ffa500'
+									},
+									invisible: false,
+									position: position,
+									draggable: true,
+									drift: echarts.util.curry(onPointDragging, dataIndex),
+									onmousemove: echarts.util.curry(showTooltip, dataIndex),
+									onmouseout: echarts.util.curry(hideTooltip, dataIndex),
+									z: 100
+								});*/
+								var imageEl = new echarts.graphic.Image({
+									type: 'image',
+									style: {
+										image: './img/circle'+dataIndex+'.png',
+										x: -12,
+										y: -12
+									},
+									invisible: false,
+									position: position,
+									draggable: true,
+									drift: echarts.util.curry(onPointDragging, dataIndex),
+									onmousedown: echarts.util.curry(beginUpdateLine, dataIndex),
+									onmouseover: echarts.util.curry(showTooltip, dataIndex),
+									onmouseup: echarts.util.curry(endUpdateLine, dataIndex),
+									onmouseout: echarts.util.curry(hideTooltip, dataIndex),
+									z: 4
+								});
+
+								points.push(imageEl);
+								zr.add(imageEl);
+							});
+						}, 0);
+
+						myChart.on('dataZoom', updatePosition);
+						window.addEventListener('resize', updatePosition);
+					}
+
+					function updatePosition() {
+						echarts.util.each(data, function (item, dataIndex) {
+							debugger;
+							var position = myChart.convertToPixel('grid', item);
+							points[dataIndex].attr('position', position);
+						});
+					}
+
+					function beginUpdateLine(dataIndex) {
+						debugger;
+						myChart.dispatchAction({
+							type: 'showTip',
+							seriesIndex: 0,
+							dataIndex: dataIndex
+						});
+						echarts.util.each(lineseries, function (lineserie, index) {
+							if(dataIndex==index){
+								lineserie.lineStyle = {
+									normal: {
+										opacity: 0.5
+									}
+								}
+								lineserie.itemStyle = {
+									normal: {
+										areaStyle: {
+											// 区域图，纵向渐变填充
+											color : (function (){
+												var zrColor = require('zrender/tool/color');
+												return zrColor.getLinearGradient(
+														0, 400, 0, 0,
+														[[0, 'rgba(34,77,88,0.1)'],[1, 'rgba(34,77,88,1)']]
+												)
+											})()
+										}
+									}
+								}
+							}
+							if(index==lineseries.length-1){
+								echarts.util.each(lineserie.data, function (datalabel, dataindex) {
+									debugger;
+									if(dataIndex==dataindex){
+										datalabel.label.normal.show = true
+									}
+								})
+							}
+
+						})
+						// Update data
+						myChart.setOption({
+							series: lineseries
+						});
+					}
+
+					function endUpdateLine(dataIndex) {
+						echarts.util.each(lineseries, function (lineserie, index) {
+							if(dataIndex==index){
+								lineserie.lineStyle = {
+									normal: {
+										opacity: 0
+									}
+								}
+								lineserie.itemStyle = {
+									normal: {
+										areaStyle: {
+											color : (function (){
+												var zrColor = require('zrender/tool/color');
+												return zrColor.getLinearGradient(
+														0, 0, 0, 0,
+														[]
+												)
+											})()
+										}
+									}
+								}
+							}
+							if(index==lineseries.length-1){
+								echarts.util.each(lineserie.data, function (datalabel, dataindex) {
+									debugger;
+									if(dataIndex==dataindex){
+										datalabel.label.normal.show = false
+									}
+								})
+							}
+						})
+						// Update data
+						myChart.setOption({
+							series: lineseries
+						});
+					}
+
+					function showTooltip(dataIndex) {
+						myChart.dispatchAction({
+							type: 'showTip',
+							seriesIndex: 0,
+							dataIndex: dataIndex
+						});
+					}
+
+					function hideTooltip(dataIndex) {
+						myChart.dispatchAction({
+							type: 'hideTip'
+						});
+					}
+
+					function onPointDragging(dataIndex, dx, dy) {
+						debugger;
+						var oldPosition = this.position;
+						var newPosition = [oldPosition[0] + dx, oldPosition[1] + dy];
+						var newlinedata = [], newAllLinedataList=[];
+						data[dataIndex] = myChart.convertFromPixel('grid', newPosition);
+						echarts.util.each(data, function (value, index) {
+							if(dataIndex==index){
+								//var x = Math.log(value[0])/Math.log(10);
+								var x = value[0];
+								var y = value[1];
+								var normalDistribution = function(k){
+									return Math.sqrt(2*Math.PI)/p*y*Math.pow(Math.E,-0.5*Math.pow(Math.abs(k-x),2)/Math.pow(p,2))/Math.sqrt(2*Math.PI)*p;
+								}
+								//var normalDistribution = y*Math.pow(Math.E,-0.5*(k-x)*(k-x)/Math.pow(p,2))/Math.sqrt(2*Math.PI)*100*p;
+								normalDistributionList[dataIndex]=normalDistribution;
+							}
+						})
+						echarts.util.each(normalDistributionList, function (easingFunc,index) {
+							if(dataIndex==index){
+								/*for (var i = 20; i <= N_POINT;) {
+									var y = easingFunc(Math.log(i)/Math.log(10));
+									newlinedata.push([Math.log(i)/Math.log(10), y]);
+									i=i+4;
+								}*/
+								for (var i = 1; i <= N_POINT;) {
+									var y = easingFunc(i);
+									//linedata.push([i, y]);
+									newlinedata.push([i, y]);
+									i=i+0.01;
+								}
+							}
+						})
+						echarts.util.each(lineseries, function (lineserie, index) {
+							if(dataIndex==index){
+								lineserie.data = newlinedata;
+							}
+							if(index<lineseries.length-1){
+								if(index==lineseries.length-2) {
+									lineserie.data = newAllLinedataList;
+								}
+								else{
+									echarts.util.each(lineserie.data, function (linedata,lineindex) {
+										if(index==0){
+											var x = linedata[0], y=linedata[1];
+											newAllLinedataList.push([x,y]);
+										}
+										else {
+											newAllLinedataList[lineindex][1] = newAllLinedataList[lineindex][1]+linedata[1];
+										}
+									})
+								}
+							}
+							else{
+								echarts.util.each(lineserie.data, function (datalabel, dataindex) {
+									debugger;
+									if(dataindex==dataIndex){
+										datalabel.value=data[dataIndex]
+									}
+								})
+							}
+						})
+
+						// Update data
+						myChart.setOption({
+							series: lineseries
+						});
+
+						// Update custom circle
+						points[dataIndex].attr('position', newPosition);
+					};
+					if (option && typeof option === "object") {
+						myChart.setOption(option, true);
+					}
+				}
+				)
+
+       </script>
+   </body>
+</html>
